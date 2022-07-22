@@ -1,0 +1,11 @@
+/node_modules
+/build
+/public
+.env
+.env.development
+dbSetup.sql
+combined.log
+error.log
+package-lock.json
+yarn.lock
+/src/certificate
