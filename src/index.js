@@ -4,6 +4,7 @@ import logger from "morgan";
 import https from "https";
 import http from "http";
 import fs from "fs";
+import {Server as SocketIO} from "socket.io";
 
 dotenv.config();
 
@@ -47,4 +48,8 @@ app.get((req, res) => {
 });
 
 http.createServer(app).listen(HTTP_PORT);
-https.createServer(options, app).listen(HTTPS_PORT);
+const httpsServer = https.createServer(options, app);
+const wsServer = new SocketIO(httpsServer)
+httpsServer.listen(HTTPS_PORT, () => {
+    console.log("Listening on http://localhost:80");
+});
