@@ -178,7 +178,8 @@ export default (wsServer, socket) => {
                 offerToReceiveAudio: true,
                 offerToReceiveVideo: true
             });
-            await pc.setLocalDescription(sdp);
+            // 아래에서 맨앞의 await를 지웠음
+            pc.setLocalDescription(sdp);
             socket.join(data.roomID);
             wsServer.to(data.senderSocketID).emit('getSenderAnswer', { sdp });
         } catch (error) {
@@ -208,7 +209,8 @@ export default (wsServer, socket) => {
                 offerToReceiveAudio: false, // 원래 false
                 offerToReceiveVideo: false  // 원래 false
             });
-            await pc.setLocalDescription(sdp);
+            // 아래에서 맨앞의 await를 지웠음
+            pc.setLocalDescription(sdp);
             wsServer.to(data.receiverSocketID).emit('getReceiverAnswer', {
                 id: data.senderSocketID,
                 sdp
