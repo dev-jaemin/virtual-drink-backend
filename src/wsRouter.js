@@ -13,7 +13,12 @@ const pc_config = {
         //   'username': '[USERNAME]'
         // },
         {
-            urls: 'stun:stun.l.google.com:19302'
+            urls: [
+                "stun:stun.l.google.com:19302",
+                "stun:stun2.l.google.com:19302",
+                "stun:stun3.l.google.com:19302",
+                "stun:stun4.l.google.com:19302",
+              ],
         }
     ]
 };
@@ -28,9 +33,12 @@ const createReceiverPeerConnection = (socketID, socket, roomID) => {
 
     pc.onicecandidate = (e) => {
         //console.log(`socketID: ${socketID}'s receiverPeerConnection icecandidate`);
-        socket.to(socketID).emit('getSenderCandidate', {
-            candidate: e.candidate
-        });
+        
+        if(e.candidate !== null){
+            socket.to(socketID).emit('getSenderCandidate', {
+                candidate: e.candidate
+            });
+        }
     };
 
     pc.oniceconnectionstatechange = (e) => {
@@ -53,7 +61,7 @@ const createReceiverPeerConnection = (socketID, socket, roomID) => {
                 }
             ];
         }
-        socket.broadcast.to(roomID).emit('userEnter', { id: socketID });
+        socket.to(roomID).emit('userEnter', { id: socketID });
     };
 
     return pc;
@@ -67,23 +75,27 @@ const createSenderPeerConnection = (
 ) => {
     const pc = new wrtc.RTCPeerConnection(pc_config);
 
-    if (senderPCs[senderSocketID]) {
-        senderPCs[senderSocketID].filter(
+    if (senderPCs[senderSocketID]) { // senderPCs 바꿔버리는 쪽으로 업데이트
+        senderPCs[senderSocketID] = senderPCs[senderSocketID].filter(
             (user) => user.id !== receiverSocketID
         );
-        senderPCs[senderSocketID].push({ id: receiverSocketID, pc });
+        senderPCs[senderSocketID].push({ id: receiverSocketID, pc: pc });
     } else
-        senderPCs = {
-            ...senderPCs,
-            [senderSocketID]: [{ id: receiverSocketID, pc }]
-        };
+        // senderPCs = {
+        //     ...senderPCs,
+        //     [senderSocketID]: [{ id: receiverSocketID, pc: pc }]
+        // };
+        senderPCs[senderSocketID] = [{ id: receiverSocketID, pc: pc }];
 
     pc.onicecandidate = (e) => {
-        //console.log(`socketID: ${receiverSocketID}'s senderPeerConnection icecandidate`);
-        socket.to(receiverSocketID).emit('getReceiverCandidate', {
-            id: senderSocketID,
-            candidate: e.candidate
-        });
+        // console.log(`socketID: ${receiverSocketID}'s senderPeerConnection icecandidate`);
+        if(e.candidate !== null){
+            socket.to(receiverSocketID).emit('getReceiverCandidate', {
+            // socket.emit('getReceiverCandidate', { // 땜빵용
+                id: senderSocketID,
+                candidate: e.candidate
+            });
+        }
     };
 
     pc.oniceconnectionstatechange = (e) => {
@@ -133,6 +145,7 @@ const closeSenderPCs = (socketID) => {
 
     senderPCs[socketID].forEach((senderPC) => {
         senderPC.pc.close();
+        if(senderPCs[senderPC.id] === undefined) return; // 이걸 넣어준 이유
         const eachSenderPC = senderPCs[senderPC.id].filter(
             (sPC) => sPC.id === socketID
         )[0];
@@ -161,7 +174,7 @@ export default (wsServer, socket) => {
             socketToRoom[data.senderSocketID] = data.roomID;
             let pc = createReceiverPeerConnection(
                 data.senderSocketID,
-                socket,
+                wsServer, // socket이었는데 wsServer같아서 바꿈
                 data.roomID
             );
             await pc.setRemoteDescription(data.sdp);
@@ -189,15 +202,16 @@ export default (wsServer, socket) => {
     socket.on('receiverOffer', async (data) => {
         try {
             let pc = createSenderPeerConnection(
-                data.receiverSocketID,
-                data.senderSocketID,
-                socket,
+                data.receiverSocketID, // 자기 socket id
+                data.senderSocketID,   // 보내주는 애들 socket id
+                wsServer,       
                 data.roomID
             );
+            console.log("pcpcpc : ", pc);
             await pc.setRemoteDescription(data.sdp);
             let sdp = await pc.createAnswer({
-                offerToReceiveAudio: false,
-                offerToReceiveVideo: false
+                offerToReceiveAudio: false, // 원래 false
+                offerToReceiveVideo: false  // 원래 false
             });
             await pc.setLocalDescription(sdp);
             wsServer.to(data.receiverSocketID).emit('getReceiverAnswer', {
@@ -214,11 +228,12 @@ export default (wsServer, socket) => {
             const senderPC = senderPCs[data.senderSocketID].filter(
                 (sPC) => sPC.id === data.receiverSocketID
             )[0];
+            
             await senderPC.pc.addIceCandidate(
                 new wrtc.RTCIceCandidate(data.candidate)
             );
         } catch (error) {
-            console.log(error);
+            console.error(error);
         }
     });
 
@@ -235,4 +250,12 @@ export default (wsServer, socket) => {
             console.log(error);
         }
     });
+
+    // setInterval(function() {
+    //     console.log("\nsenderPCs ]] ", senderPCs,
+    //                // "\nreceiverPCs ]] ", receiverPCs,
+    //                 "\nusers ]] ", users,
+    //                 "\nsocketToRoom ]] ", socketToRoom,
+    //             );
+    // }, 3000);
 };
