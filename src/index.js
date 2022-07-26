@@ -6,7 +6,7 @@ import http from 'http';
 import fs from 'fs';
 import socketio from 'socket.io';
 
-import wsRouter from './wsRouter.js';
+import wsRouter from './socket/index.js';
 
 dotenv.config();
 
@@ -67,7 +67,7 @@ const wsServer = socketio(httpsServer, {
 });
 
 wsServer.sockets.on('connection', (socket) => {
-    console.log(socket.id + " << Socket Connected");
+    // console.log(socket.id + " << Socket Connected");
     wsRouter(wsServer, socket);
 });
 
