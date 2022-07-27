@@ -12,9 +12,5 @@ export default {
     },
 
     isIncluded : (array, id) => array.some((item) => item.id === id),
-
-    sendSysChat : (socket, wsServer, wsServerState) => {
-        wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {nickname: 'SYSTEM', text: "[!]"+wsServerState.userPos[socket.id].nickname+' 당첨!'});
-    }
 }
 
