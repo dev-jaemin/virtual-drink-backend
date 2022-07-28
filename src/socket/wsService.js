@@ -1,8 +1,7 @@
 import Util from './util.js';
 import subways from './subwayData.js';
-import e from 'express';
-const startX = 200;
-const startY = 200;
+const startX = 100;
+const startY = 100;
 const startDirection = 0;
 
 let secretTextMode = false;
@@ -635,6 +634,27 @@ export function wsService(wsServer, socket, wsServerState) {
                 tgodControl(command, socket, wsServer, wsServerState);
             } else if (command[0] == 'subway') {
                 subwayControl(command, socket, wsServer, wsServerState);
+            } else if (command[0] == 'help') {
+                wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                    nickname: 'SYSTEM',
+                    text: '[게임 목록]'
+                });
+                wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                    nickname: 'SYSTEM',
+                    text: '> The Game of Death : [/tgod]'
+                });
+                wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                    nickname: 'SYSTEM',
+                    text: '> 눈치 게임 : [/nunchi]'
+                });
+                wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                    nickname: 'SYSTEM',
+                    text: '> 지하철 게임 : [/subway]'
+                });
+                wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                    nickname: 'SYSTEM',
+                    text: '> 369 게임 : [/369]'
+                });
             }
         } else if (games.nunchi.gameStarted === true) {
             nunchiLogic(msg, socket, wsServer, wsServerState);
