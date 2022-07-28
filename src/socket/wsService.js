@@ -1,15 +1,18 @@
 import Util from './util.js';
-import subways from './subway.js'
+import subways from './subwayData.js';
+import e from 'express';
 const startX = 200;
 const startY = 200;
 const startDirection = 0;
 
 let secretTextMode = false;
+let bgmNick = '';
+var k = 0;
 
 let games = {
     nunchi: {
         gameStarted: false,
-        lastNum: 0,
+        lastNum: 1,
         userChatted: [],
         users: {}
     },
@@ -17,7 +20,7 @@ let games = {
         gameStarted: false,
         lastNum: 1,
         users: [],
-        totalUserCount: 0,
+        totalUserCount: 0
     },
     tgod: {
         preparing: false,
@@ -31,8 +34,108 @@ let games = {
     subway: {
         gameStarted: false,
         line: null,
+        lastNum: 1,
         users: [],
         totalUserCount: 0,
+        startUser: null,
+        stationCheck: {}
+    }
+};
+
+const randomBgmEmit = (nick, socket, wsServer, wsServerState) => {
+    let rand = Math.floor(Math.random() * 2); // 0~1
+    bgmNick = (' ' + nick).slice(1);
+
+    if(rand == 0){    
+        wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+            nickname: 'SYSTEM',
+            text: '누가 술을 마셔~'
+        });
+        setTimeout(() => {
+            wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                nickname: 'SYSTEM',
+                text: bgmNick + '이(가) 마셔~'
+            });
+        }, 1000);
+        setTimeout(() => {
+            k = 0;
+            for (var i = 0; i < bgmNick.length; i += 1) {
+                setTimeout(() => {
+                    wsServer
+                        .in(wsServerState.socketToRoom[socket.id])
+                        .emit('getChat', {
+                            nickname: 'SYSTEM',
+                            text: bgmNick.charAt(k)
+                        });
+                    k += 1;
+                }, Math.floor((3000 / bgmNick.length) * i));
+            }
+        }, 2000);
+        setTimeout(() => {
+            wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                nickname: 'SYSTEM',
+                text: '원~샷!'
+            });
+        }, 5000);
+        setTimeout(() => {
+            wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                nickname: 'SYSTEM',
+                text: '투~샷!'
+            });
+        }, 6000);
+        setTimeout(() => {
+            wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                nickname: 'SYSTEM',
+                text: 'THREE~샷!'
+            });
+        }, 7000);
+        setTimeout(() => {
+            wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                nickname: 'SYSTEM',
+                text: '치키치키 예!'
+            });
+        }, 8000);
+    } else if(rand == 1){
+        wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+            nickname: 'SYSTEM',
+            text: bgmNick + '당첨!'
+        });
+        setTimeout(() => {
+            wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                nickname: 'SYSTEM',
+                text: '싶었어~'
+            });
+        }, 500);
+        setTimeout(() => {
+            wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                nickname: 'SYSTEM',
+                text: '싶었어~'
+            });
+        }, 1000);
+        setTimeout(() => {
+            wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                nickname: 'SYSTEM',
+                text: '마시고 싶었어~'
+            });
+        }, 1500);
+        setTimeout(() => {
+            wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                nickname: 'SYSTEM',
+                text: '고팠어~'
+            });
+        }, 2500);
+        setTimeout(() => {
+            wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                nickname: 'SYSTEM',
+                text: '고팠어~'
+            });
+        }, 3000);
+        setTimeout(() => {
+            wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                nickname: 'SYSTEM',
+                text: '술이 고팠어~'
+            });
+        }, 3500);
     }
 };
 
@@ -54,7 +157,7 @@ const deleteUserPos = (socketID, wsServerState) => {
 
 const nunchiInit = () => {
     games.nunchi.gameStarted = false;
-    games.nunchi.lastNum = 0;
+    games.nunchi.lastNum = 1;
     games.nunchi.userChatted = [];
     games.nunchi.users = {};
 };
@@ -73,7 +176,8 @@ const nunchiControl = (command, socket, wsServer, wsServerState) => {
                 text: '이미 게임중입니다.'
             });
     else if (
-        wsServerState.users[wsServerState.socketToRoom[socket.id]].length <= 1
+        wsServerState.users[wsServerState.socketToRoom[socket.id]] &&
+        wsServerState.users[wsServerState.socketToRoom[socket.id]] <= 1
     )
         wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
             nickname: 'SYSTEM',
@@ -100,12 +204,13 @@ const nunchiLogic = (msg, socket, wsServer, wsServerState) => {
         // 겹치는 번호
         if (games.nunchi.userChatted[games.nunchi.lastNum]) {
             games.nunchi.userChatted[games.nunchi.lastNum].push(msg.nickname);
-            wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
-                nickname: 'SYSTEM',
-                text:
-                    games.nunchi.userChatted[games.nunchi.lastNum].join(', ') +
-                    ' 당첨!'
-            });
+            randomBgmEmit(
+                games.nunchi.userChatted[games.nunchi.lastNum].join(', '),
+                socket,
+                wsServer,
+                wsServerState
+            );
+
             nunchiInit();
         } else {
             // 정상
@@ -113,29 +218,19 @@ const nunchiLogic = (msg, socket, wsServer, wsServerState) => {
             games.nunchi.lastNum += 1;
             if (games.nunchi.users[msg.nickname]) {
                 // 일뻔
-                wsServer
-                    .in(wsServerState.socketToRoom[socket.id])
-                    .emit('getChat', {
-                        nickname: 'SYSTEM',
-                        text: msg.nickname + ' 당첨!'
-                    });
+
+                randomBgmEmit(msg.nickname, socket, wsServer, wsServerState);
                 nunchiInit();
             } else {
                 games.nunchi.users[msg.nickname] = true;
                 if (
                     games.nunchi.lastNum ==
                     wsServerState.users[wsServerState.socketToRoom[socket.id]]
-                        .length -
-                        1
+                        .length
                 ) {
                     for (var key in games.nunchi.users) {
                         if (games.nunchi.users[key] == false) {
-                            wsServer
-                                .in(wsServerState.socketToRoom[socket.id])
-                                .emit('getChat', {
-                                    nickname: 'SYSTEM',
-                                    text: key + ' 당첨!'
-                                });
+                            randomBgmEmit(key, socket, wsServer, wsServerState);
                             nunchiInit();
                             break;
                         }
@@ -154,10 +249,12 @@ const nunchiLogic = (msg, socket, wsServer, wsServerState) => {
             });
             nunchiInit();
         } else {
-            wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
-                nickname: 'SYSTEM',
-                text: wsServerState.userPos[socket.id].nickname + ' 당첨!'
-            });
+            randomBgmEmit(
+                wsServerState.userPos[socket.id].nickname,
+                socket,
+                wsServer,
+                wsServerState
+            );
             nunchiInit();
         }
     }
@@ -205,17 +302,11 @@ const _369Logic = (msg, socket, wsServer, wsServerState) => {
             //정상
             games._369.lastNum += 1;
         } else {
-            wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
-                nickname: 'SYSTEM',
-                text: msg.nickname + ' 당첨!'
-            });
+            randomBgmEmit(msg.nickname, socket, wsServer, wsServerState);
             _369Init();
         }
     } else {
-        wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
-            nickname: 'SYSTEM',
-            text: msg.nickname + ' 당첨!'
-        });
+        randomBgmEmit(msg.nickname, socket, wsServer, wsServerState);
         _369Init();
     }
 };
@@ -240,6 +331,8 @@ const tgodInit = () => {
     games.tgod.number = null;
     games.tgod.preparedUserCount = 0;
     games.tgod.totalUserCount = 0;
+
+    secretTextMode = false;
 };
 
 const tgodControl = (command, socket, wsServer, wsServerState) => {
@@ -261,7 +354,7 @@ const tgodControl = (command, socket, wsServer, wsServerState) => {
 
         wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
             nickname: 'SYSTEM',
-            text: 'The Game of Death 게임을 시작합니다. 잠시 서로의 채팅이 안보이게 됩니다. 지목할 상대의 닉네임을 적어주세요.'
+            text: '아 신난다~ 아 재미난다~ 더 게임 오브 데스~!!'
         });
 
         games.tgod.whoseTurn = wsServerState.userPos[socket.id].nickname;
@@ -352,12 +445,12 @@ const tgodLogic = (msg, socket, wsServer, wsServerState) => {
                     games.tgod.number -= 1;
                 }
 
-                wsServer
-                    .in(wsServerState.socketToRoom[socket.id])
-                    .emit('getChat', {
-                        nickname: 'SYSTEM',
-                        text: games.tgod.whoseTurn + ' 당첨!'
-                    });
+                randomBgmEmit(
+                    games.tgod.whoseTurn,
+                    socket,
+                    wsServer,
+                    wsServerState
+                );
                 tgodInit();
             }
         }
@@ -365,13 +458,17 @@ const tgodLogic = (msg, socket, wsServer, wsServerState) => {
 };
 
 const subwayInit = () => {
-    gameStarted = false;
-    line = null;
-    users = [];
-}
+    games.subway.gameStarted = false;
+    games.subway.line = null;
+    games.subway.lastNum = 1;
+    games.subway.users = [];
+    games.subway.totalUserCount = 0;
+    games.subway.startUser = null;
+    games.subway.stationCheck = {};
+};
 
 const subwayControl = (command, socket, wsServer, wsServerState) => {
-    if (games.subway.gameStarted == true)
+    if (games.subway.gameStarted === true)
         if (command[1] == 'end') {
             wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
                 nickname: 'SYSTEM',
@@ -385,44 +482,94 @@ const subwayControl = (command, socket, wsServer, wsServerState) => {
             });
     else {
         games.subway.gameStarted = true;
+
+        games.subway.startUser = wsServerState.userPos[socket.id].nickname;
+        games.subway.users.push(games.subway.startUser);
+
         for (var i in wsServerState.userPos) {
-            games.subway.users.push(wsServerState.userPos[i].nickname);
+            if (games.subway.startUser !== wsServerState.userPos[i].nickname) {
+                games.subway.users.push(wsServerState.userPos[i].nickname);
+            }
         }
         wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
             nickname: 'SYSTEM',
-            text: '지하철 게임을 시작합니다.\n순서 : ' + games.subway.users.join(', ')
+            text: '지하철~~ 지하철~~ 지하철~~ 지하철~~'
         });
-    }
-}
 
-// const subwayLogic(msg, socket, wsServer, wsServerState) => {
-//     wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
-//         nickname: 'SYSTEM',
-//         text: '지하철 게임을 시작합니다.\n순서 : ' + games.subway.users.join(', ')
-//     });
-//     if (GetAns(games._369.lastNum)) {
-//         if (
-//             games._369.users[
-//                 (games._369.lastNum - 1) % games._369.users.length
-//             ] == msg.nickname
-//         ) {
-//             //정상
-//             games._369.lastNum += 1;
-//         } else {
-//             wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
-//                 nickname: 'SYSTEM',
-//                 text: msg.nickname + ' 당첨!'
-//             });
-//             _369Init();
-//         }
-//     } else {
-//         wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
-//             nickname: 'SYSTEM',
-//             text: msg.nickname + ' 당첨!'
-//         });
-//         _369Init();
-//     }
-// }
+        setTimeout(() => {
+            wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                nickname: 'SYSTEM',
+                text: '순서 : ' + games.subway.users.join(', ')
+            });
+        }, 1000);
+
+        setTimeout(() => {
+            wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                nickname: 'SYSTEM',
+                text: '몇 호선?? 몇 호선?? (1~9 사이의 숫자를 입력해주세요)'
+            });
+        }, 2000);
+    }
+};
+
+const subwayLogic = (msg, socket, wsServer, wsServerState) => {
+    if (games.subway.line === null) {
+        if (games.subway.startUser !== msg.nickname) {
+            console.log(games.subway.startUser, msg.nickname);
+            wsServer.in(wsServerState.socketToRoom[socket.id]).emit('getChat', {
+                nickname: 'SYSTEM',
+                text: '게임을 시작한 플레이어가 입력해주세요.'
+            });
+        } else {
+            const parsed = parseInt(msg.text, 10);
+            if (isNaN(parsed) || parsed < 1 || parsed > 9) {
+                wsServer
+                    .in(wsServerState.socketToRoom[socket.id])
+                    .emit('getChat', {
+                        nickname: 'SYSTEM',
+                        text: '숫자를 다시 입력해주세요. (1~9)'
+                    });
+            } else {
+                games.subway.line = parsed;
+
+                wsServer
+                    .in(wsServerState.socketToRoom[socket.id])
+                    .emit('getChat', {
+                        nickname: 'SYSTEM',
+                        text:
+                            games.subway.line +
+                            '호선~~ ' +
+                            games.subway.line +
+                            '호선~~ ' +
+                            games.subway.line +
+                            '호선~~ ' +
+                            games.subway.line +
+                            '호선~~ '
+                    });
+
+                subways[games.subway.line].forEach(
+                    (station) => (games.subway.stationCheck[station] = false)
+                );
+                // console.log(games.subway.stationCheck);
+            }
+        }
+    } else {
+        if (
+            msg.nickname !==
+                games.subway.users[
+                    (games.subway.lastNum - 1) % games.subway.users.length
+                ] ||
+            !(msg.text in games.subway.stationCheck) ||
+            games.subway.stationCheck[msg.text]
+        ) {
+            randomBgmEmit(msg.nickname, socket, wsServer, wsServerState);
+            subwayInit();
+        } else {
+            games.subway.stationCheck[msg.text] = true;
+            games.subway.lastNum += 1;
+        }
+    }
+};
 
 export function wsService(wsServer, socket, wsServerState) {
     socket.on('joinRoom', (data) => {
@@ -482,21 +629,24 @@ export function wsService(wsServer, socket, wsServerState) {
             if (command[0] == 'nunchi') {
                 nunchiControl(command, socket, wsServer, wsServerState);
             } else if (command[0] == '딸기당근') {
-
             } else if (command[0] == '369') {
                 _369Control(command, socket, wsServer, wsServerState);
             } else if (command[0] == 'tgod') {
                 tgodControl(command, socket, wsServer, wsServerState);
+            } else if (command[0] == 'subway') {
+                subwayControl(command, socket, wsServer, wsServerState);
             }
-        } else if (games.nunchi.gameStarted == true) {
+        } else if (games.nunchi.gameStarted === true) {
             nunchiLogic(msg, socket, wsServer, wsServerState);
-        } else if (games._369.gameStarted == true) {
+        } else if (games._369.gameStarted === true) {
             _369Logic(msg, socket, wsServer, wsServerState);
         } else if (
-            games.tgod.preparing == true ||
-            games.tgod.gameStarted == true
+            games.tgod.preparing === true ||
+            games.tgod.gameStarted === true
         ) {
             tgodLogic(msg, socket, wsServer, wsServerState);
+        } else if (games.subway.gameStarted === true) {
+            subwayLogic(msg, socket, wsServer, wsServerState);
         }
     });
 }

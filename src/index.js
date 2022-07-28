@@ -39,12 +39,17 @@ app.use(
         extended: true
     })
 );
+
 app.get('/', (req, res) => {
-    res.status(200).send({ message: 'ok' });
+    res.status(101).send('ok');
 });
 
 app.post('/socket.io', (req, res) => {
-    res.status(200).send({ message: 'ok' });
+    res.status(101).send('ok');
+});
+
+app.get('/socket.io', (req, res) => {
+    res.status(101).send('ok');
 });
 
 // 위에서부터 순서대로 처리하므로 여기까지 왔다면 404 not found
@@ -57,7 +62,8 @@ const httpsServer = https.createServer(options, app);
 
 // const wsServer = Server.listen(httpsServer);
 const wsServer = socketio(httpsServer, {
-    origin: ['https://ed0a-143-248-225-81.ngrok.io', "https://virtualdrink.vercel.app", "https://soolthertown.vercel.app"],
+    path: "/socket.io",
+    origin: ["https://soolthertown.vercel.app"],
     // optional, useful for custom headers
     handlePreflightRequest: (req, res) => {
         res.writeHead(200, {
@@ -71,7 +77,7 @@ const wsServer = socketio(httpsServer, {
 });
 
 wsServer.sockets.on('connection', (socket) => {
-    // console.log(socket.id + " << Socket Connected");
+    console.log(socket.id + " << Socket Connected");
     wsRouter(wsServer, socket);
 });
 

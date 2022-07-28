@@ -1,18 +1,16 @@
-import wrtc from 'wrtc';
-import {wsService, disconnect as wsServiceDisconnect} from './wsService.js';
-import {webRTC, disconnect as webRTCDisconnect} from './webRTC.js'
+import { wsService, disconnect as wsServiceDisconnect } from './wsService.js';
+import { webRTC, disconnect as webRTCDisconnect } from './webRTC.js';
 
 let wsServerState = {
     receiverPCs: {},
     senderPCs: {},
     users: {},
     socketToRoom: {},
-    userPos : {},
-    chats : [],
+    userPos: {},
+    chats: []
 };
 
 export default (wsServer, socket) => {
-
     socket.on('disconnect', () => {
         try {
             let roomID = wsServerState.socketToRoom[socket.id];
@@ -24,6 +22,6 @@ export default (wsServer, socket) => {
         }
     });
 
-    webRTC(wsServer, socket, wsServerState)
+    webRTC(wsServer, socket, wsServerState);
     wsService(wsServer, socket, wsServerState);
 };
